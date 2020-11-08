@@ -55,6 +55,57 @@ class paraleller:
         self.perform(self.get_users_ones, args={'var': [{'offset': i} for i in range(0, users_cnt, 1000)], 
                                                 'static': {'group_id': group_id}})
 
+
+    def mp_analyze_user(user, args, return_dict):
+
+        user_id = args
+        print('user_id='.format(user_id))
+
+        certs_of_user = analyze_user(user_id, target_words=['диплом',
+                                                            'сертификат',
+                                                            'лицензия',
+                                                            'certified',
+                                                            'specialist',
+                                                            'специалист',
+                                                            'эксперт'])
+
+        for cert_data in certs_of_user:
+            try:
+                cluster_id = clusterize(cert_data)
+                cert_data.update({'cluster_id': cluster_id})
+                add_certificate(cert_data)
+
+            except Exception as e:
+                # если новых данных нет
+                print(str(e))
+
+
+    def analyze_users(self, user_ids):
+        users = get_users_fn()
+
+        for user in users: # брать и записывать в бд
+            user['old_time'] = time.time()
+
+        procs = []
+        manager = mp.Manager()
+        return_dict = manager.dict()
+        users_cnt = len(users_ids)
+        while len(user_ids) > 0:
+            update_status(session_id, '{}%'.format(int(1000*(users_cnt-len(users_ids))/users_cnt)/10))
+            print('current user ind: {} from {}'.format(users_cnt-len(users_ids), users_cnt))
+
+            for user in users:
+                if len(args) == 0:
+                    break
+                arg = user_ids.pop()
+                proc = Process(target=mp_analyze_user, args=(user, arg, return_dict,))
+                procs.append(proc)
+                proc.start()
+            
+            for proc in procs:
+                proc.join()
+
+
     def perform(self, fn, args=[]):
         users = get_users_fn()
 
@@ -64,7 +115,6 @@ class paraleller:
         procs = []
         manager = mp.Manager()
         return_dict = manager.dict()
-        self.break_var = False
         while len(args['var']) > 0:
             for user in users:
                 if len(args) == 0:

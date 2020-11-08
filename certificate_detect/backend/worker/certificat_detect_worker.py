@@ -88,7 +88,7 @@ class User(db.Model):
 
 db.create_all()
 
-def id_from_queue():
+def id_from_queue(): # переделать
     raw_item = Session.query.filter(and_(not_(Session.status.contains('in_queue')), not_(Session.status.contains('complete')))).first()
 
     try:
@@ -101,7 +101,7 @@ def id_from_queue():
     except Exception as e:
         return None
 
-def update_status(session_id, new_status):
+def update_status(session_id, new_status): # переделать
     session = Session.query.filter_by(id=session_id).first()
     session.status = new_status
     db.session.commit()
@@ -265,7 +265,7 @@ while True:
 
     users_ids = []
     for raw_id in ids: # ускорить <===================================================
-        time.sleep(0.5)
+        time.sleep(0.4)
         try:
             id, id_type = clear_id(raw_id)
         except Exception as e:
@@ -273,7 +273,7 @@ while True:
             continue
             
         if id_type == 'club':
-            users_ids += get_all_members(id)
+            users_ids += parallel_worker.get_users(id)
 
         elif id_type == 'user':
             users_ids.append(id)
@@ -285,33 +285,15 @@ while True:
     else:
         old_cnt = 0
 
+    requered_users = []
     for index, user_id in enumerate(users_ids): # ускорить <===================================================
 
+        # если данный анализ ранее начинался, но по какой-то причине прервался
         if old_cnt > index:
             continue
-        
+        requered_users.append(user_id)
 
-        update_status(session_id, '{}%'.format(int(1000*index/len(users_ids))/10))
-
-        print('current user ind: {} from {}.user_id='.format(index+1, len(users_ids), user_id))
-
-        certs_of_user = analyze_user(user_id, target_words=['диплом',
-                                                            'сертификат',
-                                                            'лицензия',
-                                                            'certified',
-                                                            'specialist',
-                                                            'специалист',
-                                                            'эксперт'])
-
-        for cert_data in certs_of_user:
-            try:
-                cluster_id = clusterize(cert_data)
-                cert_data.update({'cluster_id': cluster_id})
-                add_certificate(cert_data)
-
-            except Exception as e:
-                # если новых данных нет
-                print(str(e))
+    print('really needed users_cnt = ', len(requered_users))
                 
     print('complete analyze!')
     update_status(session_id, 'complete')
