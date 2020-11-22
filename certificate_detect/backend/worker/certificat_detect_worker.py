@@ -4,32 +4,24 @@ import requests
 from sqlalchemy.ext.declarative import DeclarativeMeta
 import json
 
-from flask_sqlalchemy import SQLAlchemy
-
 from analyze_script import *
 from search_tree import SearchTree
-from sqlalchemy import or_, not_, and_
+
 
 from paralleler import ParallelWorker
+from db_helper import WorkerDB
 
+'''class :
 
-class AlchemyEncoder(json.JSONEncoder):
+    def __init__(self):
+        self.worker_db = WorkerDB(dbname='cert_detect_queue', password='gtnh1511475', user='root', host='localhost')
+        
+        
+    def get_users(self):
+        worker_db.get('users', columns=None, where=None)['data']
 
-    def default(self, obj):
-        if isinstance(obj.__class__, DeclarativeMeta):
-            # an SQLAlchemy class
-            fields = {}
-            for field in [x for x in dir(obj) if not x.startswith('_') and x != 'metadata']:
-                data = obj.__getattribute__(field)
-                try:
-                    json.dumps(data)  # this will fail on non-encodable values, like other classes
-                    fields[field] = data
-                except TypeError:
-                    fields[field] = None
-            # a json-encodable dict
-            return fields
-
-        return json.JSONEncoder.default(self, obj)
+    def id_from_queue(self):
+        return {'session_id': session_id, 'id': id, 'status': status}'''
 
 
 search_tree = SearchTree('db/search_tree.json')
@@ -40,64 +32,17 @@ def get_users():
     return users
 parallel_worker = ParallelWorker(get_users)
 
-app = Flask(__name__)
-
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///db/test_certs.db'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-db = SQLAlchemy(app)
-
-
-class Сertificate(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    cluster_id = db.Column(db.Integer)
-    image_url = db.Column(db.String(255))
-    preview_url = db.Column(db.String(255))
-    text_from_image = db.Column(db.Text)
-    bbs = db.Column(db.JSON)
-    text_blocks = db.Column(db.JSON)
-    user_id = db.Column(db.Integer)
-    post_id = db.Column(db.Integer)
-    session_id = db.Column(db.Integer, default=-1)
-
-
-class Session_has_certs(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    id_session = db.Column(db.Integer)
-    id_certificate = db.Column(db.Integer)
-    __table_args__ = (db.UniqueConstraint('id_session', 'id_certificate', name='_session_certificate_uc'),)
-
-
-class Cluster(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    bbs = db.Column(db.JSON)
-    cluster_name = db.Column(db.String(100))
-    is_hidden = db.Column(db.Boolean, default=False)
-
-
-class Session(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    session_name = db.Column(db.String(100))
-    status = db.Column(db.String(100))
-    data = db.Column(db.JSON)
-
-
-class User(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    token = db.Column(db.String(200))
-    vk_id = db.Column(db.String(100), unique=True)
-
-db.create_all()
 
 def id_from_queue(): # переделать
-    raw_item = Session.query.filter(and_(not_(Session.status.contains('in_queue')), not_(Session.status.contains('complete')))).first()
+    raw_item = 'DELETE queue OUTPUT deleted.* where id = (select min(id) from queue)'
 
     try:
         item = json.loads(json.dumps(raw_item, cls=AlchemyEncoder))
         session_id = item['id']
-        ids = item['data']
+        id = item['data']
         status = item['status']
 
-        return {'session_id': session_id, 'ids': ids, 'status': status}
+        return {'session_id': session_id, 'id': id, 'status': status}
     except Exception as e:
         return None
 
@@ -259,7 +204,7 @@ while True:
         
     print('new analyze!')
 
-    ids = from_queue['ids']
+    id = from_queue['id']
     session_id = from_queue['session_id']
     status = from_queue['status']
 
