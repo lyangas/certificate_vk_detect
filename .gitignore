@@ -5,4 +5,3 @@ test_certs.db
 for_docker/backend/db/test_certs.db
 for_docker/backend/api/Dockerfile_base
 for_docker/backend/api/__pycache__
-test.json
