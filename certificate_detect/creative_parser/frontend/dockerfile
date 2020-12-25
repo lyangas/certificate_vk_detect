@@ -1,0 +1,6 @@
+FROM node:10.13.0
+
+ADD . .
+
+RUN npm install -g serve
+CMD [ "serve", "-s", "build", "-l", "3333" ]
