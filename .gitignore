@@ -7,3 +7,5 @@ for_docker/backend/api/Dockerfile_base
 for_docker/backend/api/__pycache__
 test.json
 for_docker/backend/api/test_certs.db
+for_docker/backend/main_proc/db/test_certs_old.db
+for_docker/backend/main_proc/db/search_tree.json

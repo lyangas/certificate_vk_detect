@@ -24,21 +24,4 @@ services:
             - "14289:5080"
         links:
             - cert_detect_worker
-
-    cert_detect_worker:
-        
-        build: ./backend/worker
-        
-        volumes:
-            - ./backend/db:/db
-
-    frontend:
-        
-        build: ./frontend
-
-        ports:
-            - "14287:5080"
-
-        volumes:
-            - ./frontend/build:/build
         
