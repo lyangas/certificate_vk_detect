@@ -1,0 +1,24 @@
+version: '2'
+
+services:
+
+    cert_detect_api:
+        
+        build: ./api
+        
+        ports:
+            - "14281:5080"
+
+        links:
+            - cert_db
+
+    cert_db:
+
+        build: ./db
+
+        volumes:
+            - ./db/data:/var/lib/mysql
+
+        ports:
+            - "14280:3306"
+        

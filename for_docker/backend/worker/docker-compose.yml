@@ -1,0 +1,10 @@
+version: '2'
+
+services:
+
+    cert_detect_worker:
+        
+        build: ./worker
+
+        network_mode: "host"
+        
